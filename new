@@ -1,0 +1,147 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Aug 14 14:32:45 2022
+
+@author: 17477
+"""
+
+import ast
+block_pos = [(26,25),(26,26),(25,26),(24,26),(26,24),(25,24),(24,24)]
+
+def sheep_check_robot(sheep_pos, robot_pos):
+    cond1 = abs(robot_pos[0] - sheep_pos[0])
+    cond2 = abs(robot_pos[1] - sheep_pos[1])
+    if cond1 < 3 and cond2 < 3:
+        return True
+    return False
+
+def sheep_possible_move(sheep_pos, robot_pos):
+    s_aSpace = [sheep_pos]
+    dirs = [
+    lambda x, y: (x + 1, y),
+    lambda x, y: (x - 1, y),
+    lambda x, y: (x, y + 1),
+    lambda x, y: (x, y - 1)
+    ]
+    if sheep_check_robot(sheep_pos, robot_pos):
+        cond1 = robot_pos[0]-sheep_pos[0]
+        cond2 = robot_pos[1]-sheep_pos[1]
+        if cond1 > 0:
+            next_pos = (sheep_pos[0]+1,sheep_pos[1])
+            if next_pos[0] < 0 or next_pos[0] > 50 or next_pos[1] < 0 or next_pos[1] > 50:
+                pass
+            else:
+                if next_pos not in block_pos:
+                    s_aSpace.append(next_pos)
+        if cond1 < 0:
+            next_pos = (sheep_pos[0]-1,sheep_pos[1])
+            if next_pos[0] < 0 or next_pos[0] > 50 or next_pos[1] < 0 or next_pos[1] > 50:
+                pass
+            else:
+                if next_pos not in block_pos:
+                    s_aSpace.append(next_pos)
+        
+        if cond2 > 0:
+            next_pos = (sheep_pos[0],sheep_pos[1]+1)
+            if next_pos[0] < 0 or next_pos[0] > 50 or next_pos[1] < 0 or next_pos[1] > 50:
+                pass
+            else:
+                if next_pos not in block_pos:
+                    s_aSpace.append(next_pos)
+        if cond2 < 0:
+            next_pos = (sheep_pos[0]+1,sheep_pos[1]-1)
+            if next_pos[0] < 0 or next_pos[0] > 50 or next_pos[1] < 0 or next_pos[1] > 50:
+                pass
+            else:
+                if next_pos not in block_pos:
+                    s_aSpace.append(next_pos)
+        return s_aSpace
+    for di in dirs:
+        next_pos = di(sheep_pos[0],sheep_pos[1])
+        if next_pos[0] < 0 or next_pos[0] > 50 or next_pos[1] < 0 or next_pos[1] > 50:
+            continue
+        if next_pos not in block_pos:
+            s_aSpace.append(next_pos)
+    return s_aSpace
+
+def robot_possible_move(sheep_pos, robot_pos):
+    r_aSpace = [robot_pos]
+    dirs = [
+    lambda x, y: (x + 1, y),
+    lambda x, y: (x - 1, y),
+    lambda x, y: (x, y + 1),
+    lambda x, y: (x, y - 1),
+    lambda x, y: (x - 1, y - 1),
+    lambda x, y: (x - 1, y + 1),
+    lambda x, y: (x + 1, y - 1),
+    lambda x, y: (x + 1, y + 1)
+    ]
+    for di in dirs:
+        next_pos = di(robot_pos[0],robot_pos[1])
+        if next_pos[0] < 0 or next_pos[1] < 0 or next_pos[0] > 50 or next_pos[1] > 50:
+            continue
+        if (next_pos not in block_pos) and (not next_pos == sheep_pos):
+            r_aSpace.append(next_pos)
+    return r_aSpace
+
+def check_0(dict_g):
+    for item in list(dict_g):
+        if ast.literal_eval(item)[0] == (24,25) or ast.literal_eval(item)[0] == (25,25):
+            continue
+        if dict_g[item] == 0:
+            return True
+    return False
+    
+def value_iteration():
+    state_Space = {}
+    visited = []
+    new = []
+    for i in range(51):
+        for j in range(51):
+            for k in range(51):
+                for c in range(51):
+                    if (i,j) not in block_pos and (k,c) not in block_pos:
+                        state_Space[str([(i,j),(k,c)])] = 0
+                        if (i,j) == (k,c):
+                            state_Space[str([(i,j),(k,c)])] = float('inf')
+                            visited.append([(i,j),(k,c)])
+                        if (i,j) == (24,25):
+                                state_Space[str([(i,j),(k,c)])] = 1
+                                visited.append([(i,j),(k,c)])
+                                new.append([(i,j),(k,c)])  
+    while check_0(state_Space):
+        new_new = []
+        for item in new:
+            total_space = []
+            sheep_space = sheep_possible_move(item[0], item[1])
+            robot_space = robot_possible_move(item[0], item[1])
+            for i in sheep_space:
+                for j in robot_space:
+                    if [i,j] not in visited and not i == (25,25):
+                        total_space.append([i,j])
+            
+            for i in total_space:
+                new_new.append(i)
+                next_total_space = []
+                visited.append(i)
+                next_sheep_space = sheep_possible_move(i[0], i[1])
+                next_robot_space = robot_possible_move(i[0], i[1])
+                prob = 1/len(next_sheep_space)
+                for j in next_sheep_space:
+                    for k in next_robot_space:
+                        next_total_space.append([j,k])
+                state_Space[str(i)] = 1
+                for j in next_total_space:
+                    if not state_Space[str(j)] == float('inf'):
+                        state_Space[str(i)] = state_Space[str(i)] + 0.3 * prob * state_Space[str(j)]
+                print(i)
+                print(state_Space[str(i)])
+                print("------------------------------------------")
+        new = new_new
+    return state_Space
+
+new_dic = value_iteration()
+for item in new_dic:
+    print(item)
+    print(new_dic[item])
+    print("-----------------------------------------------")
